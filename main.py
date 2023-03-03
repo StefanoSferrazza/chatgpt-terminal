@@ -20,9 +20,34 @@ def cap_tokens(prompt, max_tokens):
 
 def update_tokens_limit(model_name):
     global tokens_limit
-    if model_name != "text-davinci-003":
+    if model_name != "text-davinci-003" or model_name != "gpt-3.5-turbo":
         tokens_limit = 2048
 
+def get_result(args):
+    if "turbo" in args.engine:
+        response = openai.ChatCompletion.create(
+            model=args.engine,
+            messages=[
+                {"role": "user", "content": f"{args.prompt}"}
+            ],
+            temperature=float(args.temperature),
+            max_tokens=max_tokens,
+            top_p=float(args.top_p),
+            frequency_penalty=float(args.frequency_penalty),
+            presence_penalty=float(args.presence_penalty)
+        )
+        return response['choices'][0]['message']['content']
+    else:
+        response = openai.Completion.create(
+            engine=args.engine,
+            prompt=prompt,
+            temperature=float(args.temperature),
+            max_tokens=max_tokens,
+            top_p=float(args.top_p),
+            frequency_penalty=float(args.frequency_penalty),
+            presence_penalty=float(args.presence_penalty)
+        )
+        return response['choices'][0]['text']
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -32,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('-e', '--engine',
                         help='Chatgpt engine to be used. Default is set to \'text-davinci-003\'. To see a complete '
                              'list of available models, use the utility \'print_models.py\'.',
-                        default="text-davinci-003")
+                        default="gpt-3.5-turbo")
     parser.add_argument('-t', '--temperature',
                         help='What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the '
                              'output more random, while lower values like 0.2 will make it more focused and '
@@ -70,16 +95,7 @@ if __name__ == "__main__":
     else:
         max_tokens = cap_tokens(args.prompt, int(args.max_tokens))
     if args.prompt != None:
-        response = openai.Completion.create(
-            engine=args.engine,
-            prompt=args.prompt,
-            temperature=float(args.temperature),
-            max_tokens=max_tokens,
-            top_p=float(args.top_p),
-            frequency_penalty=float(args.frequency_penalty),
-            presence_penalty=float(args.presence_penalty)
-        )
-        response_text = response['choices'][0]['text'].replace("\n", "")
+        response_text = get_result(args)
         if args.output == None:
             print(response_text)
         else:
@@ -90,14 +106,6 @@ if __name__ == "__main__":
             prompt = input("\nPrompt:\n-->")
             if prompt == "exit" or prompt == "e" or prompt == "quit" or prompt == "q":
                 break
-            response = openai.Completion.create(
-                        engine=args.engine,
-                        prompt=prompt,
-                        temperature=float(args.temperature),
-                        max_tokens=max_tokens,
-                        top_p=float(args.top_p),
-                        frequency_penalty=float(args.frequency_penalty),
-                        presence_penalty=float(args.presence_penalty)
-                    )
-            response_text = response['choices'][0]['text'].replace("\n", "")
+            args.prompt = prompt
+            response_text = get_result(args)
             print("\nCompletion:\n" + response_text + "\n")
