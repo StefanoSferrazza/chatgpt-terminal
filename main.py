@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--prompt',
                         help=f'Prompt to send to chatGPT',
-                        default="Reply with \"Hello World!\"")
+                        default=None)
     parser.add_argument('-e', '--engine',
                         help='Chatgpt engine to be used. Default is set to \'text-davinci-003\'. To see a complete '
                              'list of available models, use the utility \'print_models.py\'.',
@@ -60,24 +60,44 @@ if __name__ == "__main__":
                         default=0.0)
     parser.add_argument('-o', '--output',
                         help='Output file path where the answer should be stored. If not specified, the answer will '
-                             'be printed in the terminal. Example: ./resources/one_off_output.txt .',
-                        default="")
+                             'be printed in the terminal. Example: ./resources/one_off_output.txt',
+                        default=None)
     args = parser.parse_args()
     openai.api_key = os.getenv("OPENAI_API_KEY")
     update_tokens_limit(args.engine)
-    max_tokens = cap_tokens(args.prompt, int(args.max_tokens))
-    response = openai.Completion.create(
-        engine=args.engine,
-        prompt=args.prompt,
-        temperature=float(args.temperature),
-        max_tokens=max_tokens,
-        top_p=float(args.top_p),
-        frequency_penalty=float(args.frequency_penalty),
-        presence_penalty=float(args.presence_penalty)
-    )
-    response_text = response['choices'][0]['text'].replace("\n", "")
-    if args.output == "":
-        print(response_text)
+    if args.prompt is None:
+        max_tokens = cap_tokens("X"*500, int(args.max_tokens))
     else:
-        with open(args.output, "w") as output_file:
-            output_file.write(response_text)
+        max_tokens = cap_tokens(args.prompt, int(args.max_tokens))
+    if args.prompt != None:
+        response = openai.Completion.create(
+            engine=args.engine,
+            prompt=args.prompt,
+            temperature=float(args.temperature),
+            max_tokens=max_tokens,
+            top_p=float(args.top_p),
+            frequency_penalty=float(args.frequency_penalty),
+            presence_penalty=float(args.presence_penalty)
+        )
+        response_text = response['choices'][0]['text'].replace("\n", "")
+        if args.output == None:
+            print(response_text)
+        else:
+            with open(args.output, "w") as output_file:
+                output_file.write(response_text)
+    else:
+        while True:
+            prompt = input("\nPrompt:\n-->")
+            if prompt == "exit" or prompt == "e" or prompt == "quit" or prompt == "q":
+                break
+            response = openai.Completion.create(
+                        engine=args.engine,
+                        prompt=prompt,
+                        temperature=float(args.temperature),
+                        max_tokens=max_tokens,
+                        top_p=float(args.top_p),
+                        frequency_penalty=float(args.frequency_penalty),
+                        presence_penalty=float(args.presence_penalty)
+                    )
+            response_text = response['choices'][0]['text'].replace("\n", "")
+            print("\nCompletion:\n" + response_text + "\n")
